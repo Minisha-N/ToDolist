@@ -1,0 +1,82 @@
+{% extends 'mylist/main.html' %}
+{% block content %}
+<div class="header-bar">
+    <div>
+        <h1>Hello {{ request.user|title }}</h1>
+        <h3 style="margin:0">You have <i>{{ count }}</i> incomplete task{{ count|pluralize:"s" }}</h3>
+    </div>
+    {% if request.user.is_authenticated %}
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
+    {% else %}
+    <a href="{% url 'login' %}">Login</a>
+    {% endif %}
+</div>
+<hr>
+<h1>My To Do List {{ color }}</h1>
+
+<a href="{% url 'task-create' %}">Add Task</a>
+
+<form method="GET" id="search-form" style="margin-top: 10px;">
+    <input type="text" name="sq" id="search-input" placeholder="Search" value="{{ search_input }}">
+    <input type="submit" value="Search" style="display: none;">
+</form>
+
+<div class="task-items-wrapper" id="task-items-wrapper">
+    {% for task in tasks %}
+    <div class="task-wrapper">
+        <div class="task-title">
+            {% if task.complete %}
+            <div class="task-complete-icon"></div>
+            <i><s><a href="{% url 'task-update' task.id %}">{{ task.title }}</a></s></i>
+            {% else %}
+            <a href="{% url 'task-update' task.id %}">{{ task.title }}</a>
+            {% endif %}
+        </div>
+        <div class="task-actions">
+            <a href="{% url 'task-update' task.id %}">Edit</a>
+            <a href="{% url 'task-delete' task.id %}">Delete</a>
+        </div>
+    </div>
+    {% empty %}
+    <h3>No items in list</h3>
+    {% endfor %}
+</div>
+
+<script>
+document.getElementById('search-input').addEventListener('input', function() {
+    var query = this.value;
+    fetch(`{% url 'tasks' %}?sq=${query}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const taskItemsWrapper = document.getElementById('task-items-wrapper');
+        taskItemsWrapper.innerHTML = '';
+        if (data.tasks.length > 0) {
+            data.tasks.forEach(task => {
+                const taskWrapper = document.createElement('div');
+                taskWrapper.classList.add('task-wrapper');
+                taskWrapper.innerHTML = `
+                    <div class="task-title">
+                        ${task.complete ? '<i><s><a href="/task-update/' + task.id + '/">' + task.title + '</a></s></i>' : '<a href="/task-update/' + task.id + '/">' + task.title + '</a>'}
+                    </div>
+                    <div class="task-actions">
+                        <a href="/task-update/${task.id}/">Edit</a>
+                        <a href="/task-delete/${task.id}/">Delete</a>
+                    </div>
+                `;
+                taskItemsWrapper.appendChild(taskWrapper);
+            });
+        } else {
+            taskItemsWrapper.innerHTML = '<h3>No items in list</h3>';
+        }
+    });
+});
+</script>
+
+{% endblock content %}
